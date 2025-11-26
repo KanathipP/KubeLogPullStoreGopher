@@ -15,6 +15,7 @@ type config struct {
 	env        string
 	db         dbConfig
 	kubeconfig string
+	podFilter  podFilterConfig
 }
 
 type dbConfig struct {
@@ -22,4 +23,9 @@ type dbConfig struct {
 	maxOpenConns int
 	maxIdleConns int
 	maxIdleTime  string
+}
+
+type podFilterConfig struct {
+	namespace     string
+	labelSelector string
 }
