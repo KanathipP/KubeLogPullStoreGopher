@@ -11,6 +11,62 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func (app *application) kubeLogPuller(
+	ctx context.Context,
+	out chan<- Envelope,
+) {
+	// let's set it CronJob every 5 seconds
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	lastRead := make(map[string]time.Time)
+
+	for {
+		select {
+		case <-ctx.Done():
+			app.logger.Info("log puller context canceled")
+			return
+
+		case <-ticker.C:
+			namespace := app.config.podFilter.namespace
+			labelSelector := app.config.podFilter.labelSelector
+
+			pods, err := app.kube.Pods(namespace).List(ctx, metav1.ListOptions{
+				LabelSelector: labelSelector,
+			})
+			if err != nil {
+				app.logger.Errorw("failed to list pod logs", "namespace", namespace, "labelSelector", labelSelector)
+			}
+
+			for _, p := range pods.Items {
+				pod := p
+				podName := pod.Name
+
+				since := lastRead[podName]
+
+				app.logger.Infow("polling pod logs",
+					"pod", podName,
+					"node", pod.Spec.NodeName,
+					"since", since,
+				)
+
+				newLast, err := app.kubeLogPull(ctx, pod, namespace, since, out)
+				if err != nil && ctx.Err() == nil {
+					app.logger.Infow("error while streaming pod logs (will retry next tick)",
+						"pod", podName,
+						"error", err,
+					)
+				}
+
+				// update lastRead
+				if !newLast.IsZero() && newLast.After(lastRead[podName]) {
+					lastRead[podName] = newLast
+				}
+			}
+		}
+	}
+}
+
 func (app *application) kubeLogPull(
 	ctx context.Context,
 	pod corev1.Pod,
@@ -91,7 +147,7 @@ func (app *application) kubeLogPull(
 		if err := json.Unmarshal([]byte(msg), &env); err != nil {
 			app.logger.Debugw("failed to unmarshal json",
 				"pod", podName,
-				"msg", msg,
+				"payload", msg,
 				"err", err,
 			)
 			continue
