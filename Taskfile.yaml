@@ -1,0 +1,20 @@
+version: "3"
+
+env:
+  MIGRATIONS_PATH: "./cmd/migrate/migrations"
+
+tasks:
+  migrate-create:
+    desc: Create new migration
+    cmds:
+      - migrate create -seq -ext sql -dir {{.MIGRATIONS_PATH}} {{.CLI_ARGS}}
+
+  migrate-up:
+    desc: Run all pending migrations
+    cmds:
+      - migrate -path={{.MIGRATIONS_PATH}} -database={{.DB_ADDR}} up
+
+  migrate-down:
+    desc: Rollback migrations
+    cmds:
+      - migrate -path={{.MIGRATIONS_PATH}} -database={{.DB_ADDR}} down {{.CLI_ARGS}}
