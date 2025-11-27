@@ -7,6 +7,8 @@ import (
 	"github.com/KanathipP/KubeLogPullStoreGopher/internal/env"
 	"github.com/KanathipP/KubeLogPullStoreGopher/internal/kubeclient"
 	"go.uber.org/zap"
+
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -51,4 +53,16 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	events := make(chan Envelope, 1000)
+
+	go app.runKubeLogPuller(ctx, events)
+
+	app.logger.Info("event consumer started")
+	for env := range events {
+		// TODO: add event mux
+		app.logger.Info("get event", "envelope", env)
+	}
+
+	app.logger.Info("event consumer stopped")
 }

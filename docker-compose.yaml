@@ -1,0 +1,27 @@
+services:
+  db:
+    container_name: fl_store
+    image: bitnami/postgresql:latest
+    environment:
+      POSTGRESQL_USERNAME: admin
+      POSTGRESQL_PASSWORD: adminpassword
+      POSTGRESQL_DATABASE: fl_store
+    volumes:
+      - db:/bitnami/postgresql
+    ports:
+      - "5432:5432"
+    networks:
+      - db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d fl_store || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  db:
+    driver: bridge
+
+volumes:
+  db:

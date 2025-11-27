@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (app *application) kubeLogPuller(
+func (app *application) runKubeLogPuller(
 	ctx context.Context,
 	out chan<- Envelope,
 ) {
