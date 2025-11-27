@@ -27,7 +27,15 @@ func main() {
 		},
 	}
 
-	logger := zap.Must(zap.NewProduction()).Sugar()
+	var baseLogger *zap.Logger
+	if cfg.env == "production" {
+		baseLogger = zap.Must(zap.NewProduction())
+	} else {
+		baseLogger = zap.Must(zap.NewDevelopment())
+	}
+
+	logger := baseLogger.Sugar()
+	defer logger.Sync()
 	defer logger.Sync()
 
 	db, err := db.New(cfg.db.addr, cfg.db.maxOpenConns, cfg.db.maxIdleConns, cfg.db.maxIdleTime)
