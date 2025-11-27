@@ -6,6 +6,7 @@ import (
 	"github.com/KanathipP/KubeLogPullStoreGopher/internal/db"
 	"github.com/KanathipP/KubeLogPullStoreGopher/internal/env"
 	"github.com/KanathipP/KubeLogPullStoreGopher/internal/kubeclient"
+	"github.com/KanathipP/KubeLogPullStoreGopher/internal/store"
 	"go.uber.org/zap"
 
 	_ "github.com/lib/pq"
@@ -38,12 +39,12 @@ func main() {
 	defer logger.Sync()
 	defer logger.Sync()
 
-	db, err := db.New(cfg.db.addr, cfg.db.maxOpenConns, cfg.db.maxIdleConns, cfg.db.maxIdleTime)
+	dbConn, err := db.New(cfg.db.addr, cfg.db.maxOpenConns, cfg.db.maxIdleConns, cfg.db.maxIdleTime)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	defer db.Close()
+	defer dbConn.Close()
 
 	logger.Info("Database connection pool established")
 
@@ -53,8 +54,11 @@ func main() {
 	}
 	logger.Info("Kubernetes client initialized")
 
+	store := store.NewStorage(dbConn)
+
 	app := &application{
 		config: cfg,
+		store:  store,
 		logger: logger,
 		kube:   kube,
 	}
@@ -68,8 +72,9 @@ func main() {
 
 	app.logger.Info("event consumer started")
 	for env := range events {
-		// TODO: add event mux
-		app.logger.Info("get event", "envelope", env)
+		if err := app.eventMux(env); err != nil {
+			app.logger.Errorf("handle event error", "err", err)
+		}
 	}
 
 	app.logger.Info("event consumer stopped")

@@ -2,11 +2,13 @@ package main
 
 import (
 	"github.com/KanathipP/KubeLogPullStoreGopher/internal/kubeclient"
+	"github.com/KanathipP/KubeLogPullStoreGopher/internal/store"
 	"go.uber.org/zap"
 )
 
 type application struct {
 	config config
+	store  *store.Storage
 	logger *zap.SugaredLogger
 	kube   *kubeclient.Set
 }
